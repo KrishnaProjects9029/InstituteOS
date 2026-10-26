@@ -1,6 +1,6 @@
 # InstituteOS — Version Acceptance Gates & Exit Criteria
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.1.0 (Remediated Baseline)  
 **Status:** Approved Quality Governance Standard  
 **Governance Principle:** No Automatic Sign-Off. Explicit Multi-Disciplinary Audit Required for Every Version.  
 
@@ -8,7 +8,7 @@
 
 ## 1. Governance Rules for Version Transitions
 
-To protect the architectural integrity and operational stability of InstituteOS, progression from Version \(N\) to Version \(N+1\) is governed by strict, measurable exit criteria:
+Progression from Version \(N\) to Version \(N+1\) is governed by strict, measurable exit criteria:
 
 1. **No Automatic Sign-Off:** Passing unit tests and green CI builds are necessary conditions, but **never sufficient** on their own. A formal audit review must be conducted by the Lead Architect, QA Lead, and Security Engineer.
 2. **Zero Known Critical Defects:** A version cannot be signed off with open P0 (Critical) or P1 (High) security, financial, or isolation bugs.
@@ -25,24 +25,31 @@ To protect the architectural integrity and operational stability of InstituteOS,
 │ PILLAR             │ VERIFIABLE CRITERIA                  │ VERIFIED BY│
 ├────────────────────┼──────────────────────────────────────┼────────────┤
 │ 1. Tenant          │ 100% of tenant tables have enabled   │ Automated  │
-│    Isolation (RLS) │ RLS; automated test suite passes 50+ │ CI pgTAP   │
-│                    │ cross-tenant injection attack tests. │ Suite      │
+│    Isolation (RLS) │ RLS with FORCE RLS; branch managers  │ CI pgTAP   │
+│                    │ cannot view staff assignments outside│ Suite      │
+│                    │ assigned branches. Zero cross-tenant.│            │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 2. Authentication  │ Login, logout, session refresh, and  │ Playwright │
+│ 2. Attendance-Rule │ Full 4-tier inheritance engine:      │ PostgreSQL │
+│    Inheritance     │ Inst -> Branch -> Course -> Class.   │ Test Suite │
+│    Engine          │ Precedence: Class > Course > Branch  │ & Function │
+│                    │ > Institute. Fallbacks, validation,  │ Tests      │
+│                    │ audit history verified.              │            │
+├────────────────────┼──────────────────────────────────────┼────────────┤
+│ 3. Authentication  │ Login, logout, session refresh, and  │ Playwright │
 │    & IAM           │ password reset function; session     │ E2E        │
 │                    │ revocation terminates active tokens. │ Tests      │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 3. Database &      │ All foundational tables created via  │ Supabase   │
+│ 4. Database &      │ All foundational tables created via  │ Supabase   │
 │    Migrations      │ forward-only migrations; composite   │ Migration  │
 │                    │ tenant indexes verified.             │ Linter     │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 4. Design System   │ Accessible Next.js shell with        │ Lighthouse │
+│ 5. Audit Logging   │ Audit logs protected by row UPDATE/  │ DB Trigger │
+│    Hardening       │ DELETE trigger and statement TRUNCATE│ Test       │
+│                    │ trigger set to ENABLE ALWAYS.        │            │
+├────────────────────┼──────────────────────────────────────┼────────────┤
+│ 6. Design System   │ Accessible Next.js shell with        │ Lighthouse │
 │    & Shell UI      │ responsive sidebar; WCAG 2.2 AA      │ Axe Core   │
 │                    │ score > 95%; i18n dictionary hooks.  │ Audit      │
-├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 5. Audit Logging   │ System table captures authentication │ DB Trigger │
-│    Foundation      │ and tenant mutations; UPDATE/DELETE  │ Test       │
-│                    │ on audit logs throws SQL exceptions. │            │
 └────────────────────┴──────────────────────────────────────┴────────────┘
 ```
 
@@ -60,9 +67,9 @@ To protect the architectural integrity and operational stability of InstituteOS,
 │    Lifecycle       │ from enquiry to enrollment; student  │ E2E        │
 │                    │ roll numbers unique per institute.   │ Journey    │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 2. Attendance      │ Teacher can record daily and period- │ Performance│
-│    Engine          │ wise attendance for 40 students in   │ Benchmark  │
-│                    │ < 30 seconds; duplicate dates error. │ (< 1 sec)  │
+│ 2. Attendance      │ Attendance recording evaluated       │ Performance│
+│    Engine          │ against V1 attendance-rule hierarchy;│ Benchmark  │
+│                    │ 40 students marked in < 30 seconds.  │ (< 1 sec)  │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
 │ 3. Fees & Receipt  │ Sequential receipt numbering with    │ SQL Audit  │
 │    Generation      │ zero gaps; immutable PDF receipts    │ Script &   │
@@ -80,7 +87,7 @@ To protect the architectural integrity and operational stability of InstituteOS,
 
 ---
 
-## 4. Version 3: Academics & Communications Acceptance Gate
+## 4. Version 3: Academics & Dual-Mode Communications Acceptance Gate
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -96,23 +103,19 @@ To protect the architectural integrity and operational stability of InstituteOS,
 │    Cards           │ ranges; batch PDF report cards       │ Benchmark  │
 │                    │ render at < 2 seconds per card.      │ Runner     │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 3. Omnichannel     │ Student marked absent dispatches an  │ Webhook    │
-│    Notifications   │ SMS/WhatsApp event through queue;    │ Delivery   │
-│                    │ carrier delivery receipt logged.     │ Log Audit  │
+│ 3. Dual-Mode SMS   │ Both BYO credentials and platform-   │ Webhook &  │
+│    & Notifications │ managed credit pool function. Credit │ Ledger     │
+│                    │ ledger deductions verified.          │ Audit      │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
 │ 4. DLT Telecom     │ Indian SMS dispatches validate       │ DLT Policy │
 │    Compliance      │ registered Principal Entity & Header │ Schema     │
 │                    │ IDs prior to gateway transmission.   │ Linter     │
-├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 5. Mobile API      │ REST endpoints (`/api/v1/...`)       │ OpenAPI    │
-│    Readiness       │ documented in OpenAPI 3.1 with       │ Validator  │
-│                    │ JWT authentication and rate limits.  │ & Postman  │
 └────────────────────┴──────────────────────────────────────┴────────────┘
 ```
 
 ---
 
-## 5. Version 4: Websites, SaaS Platform & Mobile Apps Acceptance Gate
+## 5. Version 4: Websites, SaaS Platform, Stripe Payments & Dedicated Mobile Apps
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -124,20 +127,18 @@ To protect the architectural integrity and operational stability of InstituteOS,
 │    Custom Domains  │ CNAME; Let's Encrypt SSL provisions; │ Automated  │
 │                    │ public enquiry form captures leads.  │ Probe      │
 ├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 2. SaaS Billing &  │ Plan student quotas enforced;        │ Mock Stripe│
+│ 2. Stripe-First    │ Server-side webhook HMAC signature   │ Cryptograph│
+│    Payment Capture │ verification marks fee cleared;      │ Signature  │
+│                    │ Stripe Billing handles recurring subs│ Test       │
+├────────────────────┼──────────────────────────────────────┼────────────┤
+│ 3. Dedicated       │ Build pipelines (EAS/Fastlane)       │ Device Lab │
+│    Branded Mobile  │ successfully generate standalone     │ & Build    │
+│    Applications    │ branded binaries per institute.      │ Pipeline   │
+│                    │ Offline attendance syncs cleanly.    │ Audit      │
+├────────────────────┼──────────────────────────────────────┼────────────┤
+│ 4. SaaS Billing &  │ Plan student quotas enforced;        │ Stripe     │
 │    Entitlements    │ expired subscription triggers 15-day │ Webhook    │
 │                    │ grace period then Read-Only mode.    │ Simulator  │
-├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 3. Online Payment  │ Server-side webhook HMAC signature   │ Cryptograph│
-│    Verification    │ verification marks fee cleared;      │ Signature  │
-│                    │ client-reported status rejected.     │ Test       │
-├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 4. Mobile Apps     │ React Native app runs on iOS/Android;│ Device Lab │
-│    (iOS / Android) │ offline attendance syncs on reconnect│ & Network  │
-│                    │ without conflict; payments blocked.  │ Kill Test  │
-├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 5. Developer API   │ Third-party API keys query data with │ Scoped Key │
-│    & Webhooks      │ rate limiting; signed webhooks fire. │ Test Suite │
 └────────────────────┴──────────────────────────────────────┴────────────┘
 ```
 
@@ -170,9 +171,5 @@ To protect the architectural integrity and operational stability of InstituteOS,
 │ 5. High-Scale Load │ System sustains 10,000 simulated     │ k6 /       │
 │    Hardening       │ concurrent users with p95 < 500ms    │ Artillery  │
 │                    │ and 0% cross-tenant data leakage.    │ Load Test  │
-├────────────────────┼──────────────────────────────────────┼────────────┤
-│ 6. Pen-Testing &   │ Independent penetration test reports │ Security   │
-│    Security Signoff│ zero critical/high vulnerabilities;  │ Pentest    │
-│                    │ executive sign-off for live launch.  │ Report     │
 └────────────────────┴──────────────────────────────────────┴────────────┘
 ```
