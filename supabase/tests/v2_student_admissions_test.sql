@@ -64,6 +64,9 @@ SELECT has_table('student_enrollments', 'student_enrollments table exists');
 -- -----------------------------------------------------------------------------
 -- 2. Setup Baseline Test Entities for Phase 2.1
 -- -----------------------------------------------------------------------------
+-- Truncate student tables in this test transaction to ensure deterministic isolation from seed data
+TRUNCATE TABLE student_enrollments, student_profiles CASCADE;
+
 INSERT INTO academic_years (id, institute_id, name, start_date, end_date, is_current)
 VALUES 
     ('11111111-9999-1111-1111-111111111101', '11111111-1111-1111-1111-111111111111', '2026-2027', '2026-06-01', '2027-04-30', true),
