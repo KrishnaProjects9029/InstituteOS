@@ -15,6 +15,12 @@
 BEGIN;
 SELECT plan(40);
 
+-- Ensure authenticated role has standard schema grants so tests evaluate RLS policies
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
 -- -----------------------------------------------------------------------------
 -- Helper Function: Set JWT Claims for RLS Impersonation Testing
 -- -----------------------------------------------------------------------------
@@ -71,29 +77,31 @@ SELECT has_function('resolve_effective_attendance_rule', 'resolve_effective_atte
 -- -----------------------------------------------------------------------------
 -- 2. Audit Log Immutability Protection (3 tests)
 -- -----------------------------------------------------------------------------
-PREPARE test_audit_update AS
-    UPDATE audit_logs SET action = 'TAMPERED' WHERE id = '00000000-0000-0000-0000-000000000000';
+
+-- Insert a baseline record into audit_logs so UPDATE and DELETE triggers have a row to intercept
+INSERT INTO audit_logs (id, institute_id, action, entity_name, entity_id)
+VALUES (
+    '00000000-0000-0000-0000-000000000001',
+    '11111111-1111-1111-1111-111111111111',
+    'INITIAL_RECORD',
+    'institutes',
+    '11111111-1111-1111-1111-111111111111'
+);
 
 SELECT throws_ok(
-    'test_audit_update',
+    $$UPDATE audit_logs SET action = 'TAMPERED' WHERE id = '00000000-0000-0000-0000-000000000001'$$,
     'Audit logs are strictly immutable. UPDATE and DELETE operations are prohibited.',
     'Prohibits UPDATE operations on audit_logs'
 );
 
-PREPARE test_audit_delete AS
-    DELETE FROM audit_logs WHERE id = '00000000-0000-0000-0000-000000000000';
-
 SELECT throws_ok(
-    'test_audit_delete',
+    $$DELETE FROM audit_logs WHERE id = '00000000-0000-0000-0000-000000000001'$$,
     'Audit logs are strictly immutable. UPDATE and DELETE operations are prohibited.',
     'Prohibits DELETE operations on audit_logs'
 );
 
-PREPARE test_audit_truncate AS
-    TRUNCATE TABLE audit_logs;
-
 SELECT throws_ok(
-    'test_audit_truncate',
+    'TRUNCATE TABLE audit_logs',
     'Audit logs are strictly immutable. TRUNCATE operation is prohibited.',
     'Prohibits TRUNCATE operations on audit_logs'
 );
@@ -101,74 +109,56 @@ SELECT throws_ok(
 -- -----------------------------------------------------------------------------
 -- 3. Attendance Rule Validation Constraints & Cross-Tenant Relationships (6 tests)
 -- -----------------------------------------------------------------------------
-PREPARE test_invalid_pct_high AS
-    INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
-    VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'MINIMUM_PERCENTAGE', '{"percentage": 150}'::jsonb);
-
 SELECT throws_ok(
-    'test_invalid_pct_high',
+    $$INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
+      VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'MINIMUM_PERCENTAGE', '{"percentage": 150}'::jsonb)$$,
     'Invalid MINIMUM_PERCENTAGE: percentage must be a number between 0 and 100',
     'Rejects MINIMUM_PERCENTAGE > 100'
 );
 
-PREPARE test_invalid_pct_low AS
-    INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
-    VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'MINIMUM_PERCENTAGE', '{"percentage": -5}'::jsonb);
-
 SELECT throws_ok(
-    'test_invalid_pct_low',
+    $$INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
+      VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'MINIMUM_PERCENTAGE', '{"percentage": -5}'::jsonb)$$,
     'Invalid MINIMUM_PERCENTAGE: percentage must be a number between 0 and 100',
     'Rejects MINIMUM_PERCENTAGE < 0'
 );
 
-PREPARE test_invalid_absence AS
-    INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
-    VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'CONSECUTIVE_ABSENCE_ALERT', '{"threshold_days": 0}'::jsonb);
-
 SELECT throws_ok(
-    'test_invalid_absence',
+    $$INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
+      VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'CONSECUTIVE_ABSENCE_ALERT', '{"threshold_days": 0}'::jsonb)$$,
     'Invalid CONSECUTIVE_ABSENCE_ALERT: threshold_days must be an integer >= 1',
     'Rejects CONSECUTIVE_ABSENCE_ALERT threshold < 1'
 );
 
-PREPARE test_invalid_grace AS
-    INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
-    VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'LATE_GRACE_MINUTES', '{"grace_minutes": 250}'::jsonb);
-
 SELECT throws_ok(
-    'test_invalid_grace',
+    $$INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
+      VALUES ('11111111-1111-1111-1111-111111111111', 'INSTITUTE', 'LATE_GRACE_MINUTES', '{"grace_minutes": 250}'::jsonb)$$,
     'Invalid LATE_GRACE_MINUTES: grace_minutes must be an integer between 0 and 180',
     'Rejects LATE_GRACE_MINUTES > 180'
 );
 
-PREPARE test_cross_tenant_branch AS
-    INSERT INTO attendance_rules (institute_id, scope_level, branch_id, rule_type, rule_value)
-    VALUES (
+SELECT throws_ok(
+    $$INSERT INTO attendance_rules (institute_id, scope_level, branch_id, rule_type, rule_value)
+      VALUES (
         '11111111-1111-1111-1111-111111111111', 
         'BRANCH', 
-        '22222222-bbbb-2222-2222-222222222201', -- Belongs to Tenant 2!
+        '22222222-bbbb-2222-2222-222222222201',
         'MINIMUM_PERCENTAGE', 
         '{"percentage": 85}'::jsonb
-    );
-
-SELECT throws_ok(
-    'test_cross_tenant_branch',
+      )$$,
     'Cross-tenant violation: branch 22222222-bbbb-2222-2222-222222222201 does not belong to institute 11111111-1111-1111-1111-111111111111',
     'Rejects cross-tenant branch reference'
 );
 
-PREPARE test_cross_tenant_course AS
-    INSERT INTO attendance_rules (institute_id, scope_level, course_id, rule_type, rule_value)
-    VALUES (
+SELECT throws_ok(
+    $$INSERT INTO attendance_rules (institute_id, scope_level, course_id, rule_type, rule_value)
+      VALUES (
         '22222222-2222-2222-2222-222222222222', 
         'COURSE', 
-        '11111111-cccc-1111-1111-111111111101', -- Belongs to Tenant 1!
+        '11111111-cccc-1111-1111-111111111101',
         'MINIMUM_PERCENTAGE', 
         '{"percentage": 85}'::jsonb
-    );
-
-SELECT throws_ok(
-    'test_cross_tenant_course',
+      )$$,
     'Cross-tenant violation: course 11111111-cccc-1111-1111-111111111101 does not belong to institute 22222222-2222-2222-2222-222222222222',
     'Rejects cross-tenant course reference'
 );
@@ -321,18 +311,15 @@ SELECT is(
     'Branch Manager sees only branch assignments for Main Campus'
 );
 
-PREPARE test_manager_unassigned_insert AS
-    INSERT INTO attendance_rules (institute_id, scope_level, branch_id, rule_type, rule_value)
-    VALUES (
+SELECT throws_matching(
+    $$INSERT INTO attendance_rules (institute_id, scope_level, branch_id, rule_type, rule_value)
+      VALUES (
         '11111111-1111-1111-1111-111111111111', 
         'BRANCH', 
-        '11111111-bbbb-1111-1111-111111111102', -- North Campus (Not assigned to Bob!)
+        '11111111-bbbb-1111-1111-111111111102',
         'LATE_GRACE_MINUTES', 
         '{"grace_minutes": 10}'::jsonb
-    );
-
-SELECT throws_matching(
-    'test_manager_unassigned_insert',
+      )$$,
     'row-level security',
     'Branch Manager cannot insert attendance rules for unassigned branch'
 );
@@ -348,31 +335,25 @@ SELECT set_test_claims(
     'STUDENT'
 );
 
-PREPARE test_student_insert_rule AS
-    INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
-    VALUES (
+SELECT throws_matching(
+    $$INSERT INTO attendance_rules (institute_id, scope_level, rule_type, rule_value)
+      VALUES (
         '11111111-1111-1111-1111-111111111111', 
         'INSTITUTE', 
         'LATE_GRACE_MINUTES', 
         '{"grace_minutes": 10}'::jsonb
-    );
-
-SELECT throws_matching(
-    'test_student_insert_rule',
+      )$$,
     'row-level security',
     'Student role is rejected when attempting to insert attendance rules'
 );
 
-PREPARE test_student_insert_branch AS
-    INSERT INTO branches (institute_id, name, code)
-    VALUES (
+SELECT throws_matching(
+    $$INSERT INTO branches (institute_id, name, code)
+      VALUES (
         '11111111-1111-1111-1111-111111111111', 
         'Unauthorized Campus', 
         'ALPHA-UNAUTH'
-    );
-
-SELECT throws_matching(
-    'test_student_insert_branch',
+      )$$,
     'row-level security',
     'Student role is rejected when attempting to insert branches'
 );
