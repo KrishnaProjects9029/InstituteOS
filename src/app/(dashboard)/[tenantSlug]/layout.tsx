@@ -81,6 +81,14 @@ export default async function TenantDashboardLayout({
           </Link>
 
           <Link
+            href={`/${tenantSlug}/students`}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span>Students & Admissions</span>
+          </Link>
+
+          <Link
             href={`/${tenantSlug}/attendance-rules`}
             className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
@@ -97,16 +105,16 @@ export default async function TenantDashboardLayout({
           </Link>
 
           <div className="pt-4 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Upcoming Modules (V2–V5)
+            Upcoming Modules (V2.2–V5)
           </div>
 
           <div className="flex items-center justify-between px-3 py-2 rounded-md text-sm text-muted-foreground/60 cursor-not-allowed">
             <div className="flex items-center gap-3">
-              <Users className="h-4 w-4" />
-              <span>Admissions & Students</span>
+              <CheckSquare className="h-4 w-4" />
+              <span>Daily Attendance Logs</span>
             </div>
             <Badge variant="outline" className="text-[10px] text-muted-foreground/60">
-              V2
+              V2.2
             </Badge>
           </div>
 

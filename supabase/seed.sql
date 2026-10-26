@@ -143,3 +143,44 @@ VALUES
     ('11111111-bba0-1111-1111-111111111101', '11111111-1111-1111-1111-111111111111', '11111111-eeee-1111-1111-111111111102', '11111111-bbbb-1111-1111-111111111101', 'BRANCH_MANAGER', true),
     ('11111111-bba0-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', '11111111-eeee-1111-1111-111111111104', '11111111-bbbb-1111-1111-111111111102', 'BRANCH_MANAGER', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- -----------------------------------------------------------------------------
+-- 5. Phase 2.1 Academic Structure & Student Fixtures
+-- -----------------------------------------------------------------------------
+
+-- Academic Years
+INSERT INTO academic_years (id, institute_id, name, start_date, end_date, is_current)
+VALUES 
+    ('11111111-9999-1111-1111-111111111101', '11111111-1111-1111-1111-111111111111', '2026-2027', '2026-06-01', '2027-04-30', true),
+    ('22222222-9999-2222-2222-222222222201', '22222222-2222-2222-2222-222222222222', '2026-2027', '2026-06-01', '2027-04-30', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Class Divisions
+INSERT INTO divisions (id, institute_id, class_id, name, capacity)
+VALUES 
+    ('11111111-8888-1111-1111-111111111101', '11111111-1111-1111-1111-111111111111', '11111111-dddd-1111-1111-111111111101', 'Section A', 50),
+    ('11111111-8888-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', '11111111-dddd-1111-1111-111111111101', 'Section B', 50)
+ON CONFLICT (id) DO NOTHING;
+
+-- Student Profiles
+INSERT INTO student_profiles (
+    id, institute_id, admission_number, first_name, last_name, 
+    date_of_birth, gender, guardian_name, guardian_phone, guardian_email, city
+) VALUES 
+    ('11111111-7777-1111-1111-111111111101', '11111111-1111-1111-1111-111111111111', 'ADM-2026-001', 
+     'Aarav', 'Sharma', '2010-05-15', 'MALE', 'Rajesh Sharma', '+919876543210', 'parent.aarav@example.com', 'Pune'),
+    ('11111111-7777-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', 'ADM-2026-002', 
+     'Priya', 'Patel', '2010-08-22', 'FEMALE', 'Mahesh Patel', '+919876543211', 'parent.priya@example.com', 'Pune'),
+    ('22222222-7777-2222-2222-222222222201', '22222222-2222-2222-2222-222222222222', 'ADM-2026-001', 
+     'Vikram', 'BetaStudent', '2010-03-20', 'MALE', 'Suresh', '+919111111111', 'parent.vikram@example.com', 'Nashik')
+ON CONFLICT (id) DO NOTHING;
+
+-- Student Enrollments (Roll numbers generated automatically by trigger)
+INSERT INTO student_enrollments (
+    id, institute_id, branch_id, student_profile_id, academic_year_id, class_id, division_id
+) VALUES 
+    ('11111111-6666-1111-1111-111111111101', '11111111-1111-1111-1111-111111111111', '11111111-bbbb-1111-1111-111111111101',
+     '11111111-7777-1111-1111-111111111101', '11111111-9999-1111-1111-111111111101', '11111111-dddd-1111-1111-111111111101', '11111111-8888-1111-1111-111111111101'),
+    ('11111111-6666-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', '11111111-bbbb-1111-1111-111111111101',
+     '11111111-7777-1111-1111-111111111102', '11111111-9999-1111-1111-111111111101', '11111111-dddd-1111-1111-111111111101', '11111111-8888-1111-1111-111111111101')
+ON CONFLICT (id) DO NOTHING;
