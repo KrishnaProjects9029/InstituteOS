@@ -34,7 +34,7 @@ export default function LoginPage() {
             Sign In to Institute<span className="text-primary">OS</span>
           </CardTitle>
           <CardDescription>
-            Enter your credentials to access your institute's multi-branch portal.
+            Enter your credentials to access your institute&apos;s multi-branch portal.
           </CardDescription>
         </CardHeader>
 
