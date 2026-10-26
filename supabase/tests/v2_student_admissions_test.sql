@@ -79,6 +79,22 @@ VALUES
     ('11111111-8888-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', '11111111-dddd-1111-1111-111111111101', 'Section B', 50)
 ON CONFLICT (id) DO NOTHING;
 
+-- Setup North Campus entities for branch-scoping tests
+INSERT INTO courses (id, institute_id, branch_id, code, name)
+VALUES 
+    ('11111111-cccc-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', '11111111-bbbb-1111-1111-111111111102', 'SCI-10-N', 'North Secondary')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO classes (id, institute_id, branch_id, course_id, name, sequence_order)
+VALUES 
+    ('11111111-dddd-1111-1111-111111111102', '11111111-1111-1111-1111-111111111111', '11111111-bbbb-1111-1111-111111111102', '11111111-cccc-1111-1111-111111111102', 'Grade 10 - North', 1)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO divisions (id, institute_id, class_id, name, capacity)
+VALUES 
+    ('11111111-8888-1111-1111-111111111103', '11111111-1111-1111-1111-111111111111', '11111111-dddd-1111-1111-111111111102', 'Section N1', 50)
+ON CONFLICT (id) DO NOTHING;
+
 -- -----------------------------------------------------------------------------
 -- 3. Admission Number Uniqueness Constraints (2 tests)
 -- -----------------------------------------------------------------------------
@@ -357,8 +373,8 @@ SELECT throws_matching(
         '11111111-bbbb-1111-1111-111111111102', -- North Campus!
         '11111111-7777-1111-1111-111111111105',
         '11111111-9999-1111-1111-111111111101',
-        '11111111-dddd-1111-1111-111111111101',
-        '11111111-8888-1111-1111-111111111101'
+        '11111111-dddd-1111-1111-111111111102', -- North Campus Class!
+        '11111111-8888-1111-1111-111111111103'  -- North Campus Division!
       )$$,
     'row-level security',
     'Branch Manager cannot create enrollments in an unassigned branch'
