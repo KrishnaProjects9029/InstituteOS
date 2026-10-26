@@ -4,6 +4,7 @@ import {
   LayoutDashboard, 
   GitBranch, 
   ShieldCheck, 
+  CheckSquare,
   Users, 
   Settings, 
   LogOut, 
@@ -61,7 +62,7 @@ export default async function TenantDashboardLayout({
           </div>
         </div>
 
-        {/* Main Nav Links */}
+        {/* Main Nav Links (V1 Modules) */}
         <nav className="flex-1 p-3 space-y-1">
           <Link
             href={`/${tenantSlug}`}
@@ -77,6 +78,14 @@ export default async function TenantDashboardLayout({
           >
             <GitBranch className="h-4 w-4 text-muted-foreground" />
             <span>Branches & Campuses</span>
+          </Link>
+
+          <Link
+            href={`/${tenantSlug}/attendance-rules`}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            <CheckSquare className="h-4 w-4 text-muted-foreground" />
+            <span>Attendance Hierarchy</span>
           </Link>
 
           <Link
